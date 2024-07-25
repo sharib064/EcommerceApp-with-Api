@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shopapp/models/product.dart';
 import 'package:shopapp/models/shop.dart';
@@ -13,54 +11,7 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  List<Map<String, dynamic>> cartProducts = [];
-
-  Future<void> apiCall() async {
-    try {
-      final response =
-          await http.get(Uri.parse("https://fakestoreapi.com/carts/user/4"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        // Assuming the first cart object for the user
-        if (data.isNotEmpty) {
-          final products = data[0]['products'];
-          // Fetch product details for each productId in the cart
-          for (var product in products) {
-            final productDetails =
-                await fetchProductDetails(product['productId']);
-            setState(() {
-              cartProducts.add({
-                ...productDetails,
-                'quantity': product['quantity'],
-              });
-            });
-          }
-        }
-      } else {
-        throw Exception('Failed to load cart items');
-      }
-    } catch (e) {
-      print('Error fetching cart items: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchProductDetails(int productId) async {
-    final response = await http
-        .get(Uri.parse("https://fakestoreapi.com/products/$productId"));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load product details');
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    apiCall();
-  }
-
-  void removeItemFromCart(BuildContext context, Map<String, dynamic> product) {
+  void removeItemFromCart(BuildContext context, Product product) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -79,10 +30,7 @@ class _CartPageState extends State<CartPage> {
           ),
           MaterialButton(
             onPressed: () {
-              setState(() {
-                cartProducts.remove(product);
-              });
-              Navigator.pop(context);
+              context.read<Shop>().removeItemFromCart(product);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Center(
@@ -95,6 +43,7 @@ class _CartPageState extends State<CartPage> {
                   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
                 ),
               );
+              Navigator.pop(context);
             },
             child: Text(
               "Yes",
@@ -108,6 +57,7 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
+    List<Product> cartProducts = Provider.of<Shop>(context).getUserCart();
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -128,9 +78,9 @@ class _CartPageState extends State<CartPage> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     tileColor: Theme.of(context).colorScheme.primary,
-                    leading: Image.network(product['image']),
-                    title: Text(product['title']),
-                    subtitle: Text('\$' + product['price'].toString()),
+                    leading: Image.network(product.image),
+                    title: Text(product.title),
+                    subtitle: Text('\$' + product.price),
                     trailing: IconButton(
                       onPressed: () => removeItemFromCart(context, product),
                       icon: const Icon(
