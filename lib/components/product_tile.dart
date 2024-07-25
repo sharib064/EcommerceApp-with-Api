@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shopapp/models/product.dart';
 import 'package:shopapp/models/shop.dart';
+import 'package:http/http.dart' as http;
 import 'package:shopapp/pages/detailed_product.dart';
 
 class ProductTile extends StatelessWidget {
@@ -20,20 +23,53 @@ class ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    void addToCart(BuildContext context) {
-      context.read<Shop>().addProductToCart(Product(
-          title: title, price: price, image: image, productID: productID));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Center(
-              child: Text(
-            'Item added to cart',
-            style: TextStyle(color: Theme.of(context).colorScheme.primary),
-          )),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        ),
-      );
+    Future<void> addToCart(BuildContext context) async {
+      try {
+        final response = await http.post(
+          Uri.parse('https://fakestoreapi.com/carts'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'userId': 4,
+            'date': '2020-02-03',
+            'products': [
+              {'productId': productID, 'quantity': 1}
+            ]
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          print('Product added to cart: $data');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Product added to cart')),
+          );
+        } else {
+          print('Failed to add product to cart');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add product to cart')),
+          );
+        }
+      } catch (e) {
+        print('Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding product to cart')),
+        );
+      }
     }
+    // void addToCart(BuildContext context) {
+    //   context.read<Shop>().addProductToCart(Product(
+    //       title: title, price: price, image: image, productID: productID));
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Center(
+    //           child: Text(
+    //         'Item added to cart',
+    //         style: TextStyle(color: Theme.of(context).colorScheme.primary),
+    //       )),
+    //       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    //     ),
+    //   );
+    // }
 
     return Expanded(
       child: GestureDetector(
